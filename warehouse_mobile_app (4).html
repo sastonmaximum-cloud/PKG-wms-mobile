@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>คลังบรรจุภัณฑ์ | WMS Mobile</title>
+    <!-- Tailwind Play CDN removed for production/self-contained use.
+         The app now uses custom CSS + design tokens for full offline capability and no warnings. -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- html5-qrcode for real barcode scanning (lightweight, works great on mobile) -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        /* Self-contained Tailwind-like utilities + design system */
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&amp;family=Sarabun:wght@400;500&amp;display=swap');
+        
+        :root {
+            --navy: #0A1628;
+            --teal: #0D9488;
+            --teal-600: #0D9488;
+            --emerald-500: #10B981;
+            --amber-500: #F59E0B;
+        }
+        
+        body {
+            font-family: 'Sarabun', system-ui, -apple-system, sans-serif;
+            background: #e2e8f0;
+        }
+        
+        .header-font {
+            font-family: 'Prompt', system-ui, sans-serif;
+        }
+
+        .mobile-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: #F0F4F8;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #0A1628 0%, #1E3A5F 100%);
+            color: white;
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .nav-active {
+            color: #0D9488;
+            border-bottom: 3px solid #0D9488;
+        }
+
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        
+        .card:active {
+            transform: scale(0.985);
+        }
+
+        .scan-input {
+            font-size: 18px;
+            padding: 16px;
+            border: 3px solid #0D9488;
+            border-radius: 1rem;
+            text-align: center;
+            font-family: 'Prompt', monospace;
+            width: 100%;
+        }
+
+        .location-pill {
+            background: #0D9488;
+            color: white;
+            font-size: 13px;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .transaction-item {
+            border-left: 4px solid #0D9488;
+            background: white;
+            border-radius: 1.5rem;
+        }
+
+        .bottom-nav {
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+            background: white;
+        }
+
+        .success-toast {
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        .metric-value {
+            font-family: 'Prompt', system-ui, sans-serif;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        /* Utility classes (Tailwind-like) */
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-3 { gap: 0.75rem; }
+        .gap-4 { gap: 1rem; }
+        .gap-x-2 { column-gap: 0.5rem; }
+        .gap-x-3 { column-gap: 0.75rem; }
+        .gap-x-4 { column-gap: 1rem; }
+        
+        .grid { display: grid; }
+        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        
+        .w-full { width: 100%; }
+        .flex-1 { flex: 1 1 0%; }
+        .flex-shrink-0 { flex-shrink: 0; }
+        
+        .p-3 { padding: 0.75rem; }
+        .p-4 { padding: 1rem; }
+        .p-5 { padding: 1.25rem; }
+        .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+        .px-4 { padding-left: 1rem; padding-right: 1rem; }
+        .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+        .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+        
+        .mb-1 { margin-bottom: 0.25rem; }
+        .mb-1\.5 { margin-bottom: 0.375rem; }
+        .mb-3 { margin-bottom: 0.75rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mb-5 { margin-bottom: 1.25rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mt-1 { margin-top: 0.25rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .mt-3 { margin-top: 0.75rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mt-auto { margin-top: auto; }
+        
+        .text-xs { font-size: 0.75rem; line-height: 1rem; }
+        .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+        .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+        .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+        .text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+        
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+        
+        .text-white { color: white; }
+        .text-slate-400 { color: #94a3b8; }
+        .text-slate-500 { color: #64748b; }
+        .text-slate-600 { color: #475569; }
+        .text-slate-700 { color: #334155; }
+        .text-slate-800 { color: #1e293b; }
+        .text-teal-600 { color: #0D9488; }
+        .text-teal-700 { color: #0f766e; }
+        .text-emerald-600 { color: #059669; }
+        .text-amber-600 { color: #d97706; }
+        
+        .bg-white { background-color: white; }
+        .bg-teal-50 { background-color: #f0fdfa; }
+        .bg-teal-600 { background-color: #0D9488; }
+        .bg-emerald-100 { background-color: #d1fae5; }
+        .bg-amber-100 { background-color: #fef3c7; }
+        .bg-amber-500 { background-color: #F59E0B; }
+        .bg-slate-100 { background-color: #f1f5f9; }
+        .bg-slate-200 { background-color: #e2e8f0; }
+        .bg-slate-800 { background-color: #1e293b; }
+        
+        .rounded-2xl { border-radius: 1rem; }
+        .rounded-3xl { border-radius: 1.5rem; }
+        
+        .border { border-width: 1px; border-color: #e2e8f0; }
+        .border-slate-200 { border-color: #e2e8f0; }
+        
+        .shadow-sm { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+        .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        
+        .hover\:bg-teal-700:hover { background-color: #0f766e; }
+        .active\:bg-teal-800:active { background-color: #115e59; }
+        .hover\:bg-amber-600:hover { background-color: #d97706; }
+        
+        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+        
+        .fixed { position: fixed; }
+        .bottom-0 { bottom: 0; }
+        .left-0 { left: 0; }
+        .right-0 { right: 0; }
+        .z-50 { z-index: 50; }
+        .z-\[100\] { z-index: 100; }
+        
+        .text-center { text-align: center; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .space-y-2 > * + * { margin-top: 0.5rem; }
+        .space-y-2\.5 > * + * { margin-top: 0.625rem; }
+        .space-y-3 > * + * { margin-top: 0.75rem; }
+        
+        .min-w-0 { min-width: 0; }
+        .max-w-\[480px\] { max-width: 480px; }
+        .mx-auto { margin-left: auto; margin-right: auto; }
+        
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        
+        .hidden { display: none; }
+    </style>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&amp;family=Sarabun:wght@400;500&amp;display=swap');
+        
+        :root {
+            --navy: #0A1628;
+            --teal: #0D9488;
+        }
+        
+        body {
+            font-family: 'Sarabun', system-ui, sans-serif;
+        }
+        
+        .header-font {
+            font-family: 'Prompt', system-ui, sans-serif;
+        }
+
+        .mobile-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: #F0F4F8;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #0A1628 0%, #1E3A5F 100%);
+            color: white;
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .nav-active {
+            color: #0D9488;
+            border-bottom: 3px solid #0D9488;
+        }
+
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card:active {
+            transform: scale(0.98);
+        }
+
+        .scan-input {
+            font-size: 18px;
+            padding: 16px;
+            border: 3px solid #0D9488;
+            border-radius: 16px;
+            text-align: center;
+            font-family: 'Prompt', monospace;
+        }
+
+        .warehouse-bg {
+            background-image: url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill-rule=%22evenodd%22%3E%3Cpath fill=%22%23e2e8f0%22 fill-opacity=%220.08%22 d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-10V8h-2v16h-4v2h4v4h2v-4h4v-2h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 6v-4H4v4H0v2h4v4h2V8h4V6H6z%22/%3E%3C/g%3E%3C/svg%27');
+            background-size: 60px 60px;
+        }
+
+        .metric-value {
+            font-family: 'Prompt', system-ui, sans-serif;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .location-pill {
+            background: #0D9488;
+            color: white;
+            font-size: 13px;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+
+        .transaction-item {
+            border-left: 4px solid #0D9488;
+        }
+
+        .bottom-nav {
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+        }
+
+        .success-toast {
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        .barcode-display {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body class="bg-slate-200">
+    <div class="mobile-container mx-auto shadow-2xl">
+        
+        <!-- Header -->
+        <div class="app-header px-5 pt-8 pb-5 sticky top-0 z-50">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-11 h-11 bg-teal-500 rounded-2xl flex items-center justify-center shadow-inner">
+                        <i class="fa-solid fa-warehouse text-white text-3xl"></i>
+                    </div>
+                    <div>
+                        <div class="header-font text-2xl font-semibold tracking-tight">คลังบรรจุภัณฑ์</div>
+                        <div class="text-teal-300 text-xs -mt-1">WMS Mobile • v1.0</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-teal-200">ผู้ใช้งาน</div>
+                    <div class="font-semibold text-sm">Jessica • หัวหน้าแผนก</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="pb-20">
+            
+            <!-- ========== SECTION: DASHBOARD ========== -->
+            <div id="section-dashboard" class="section active px-5 pt-5">
+                <div class="flex items-end justify-between mb-4">
+                    <div>
+                        <div class="text-slate-500 text-sm">วันนี้ • 28 มิ.ย. 2569</div>
+                        <div class="header-font text-3xl font-bold text-slate-800">ภาพรวมคลัง</div>
+                    </div>
+                    <div class="bg-white shadow-sm px-3 py-1.5 rounded-3xl flex items-center gap-x-2 text-sm">
+                        <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span class="font-medium text-emerald-600">ออนไลน์</span>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="bg-white rounded-3xl p-4 shadow-sm card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="text-xs text-slate-500">ตำแหน่งทั้งหมด</div>
+                                <div class="metric-value text-4xl text-slate-800 mt-1" id="kpi-locations">15</div>
+                            </div>
+                            <i class="fa-solid fa-map-marker-alt text-3xl text-teal-500 mt-1"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl p-4 shadow-sm card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="text-xs text-slate-500">ความแม่นยำสต็อก</div>
+                                <div class="metric-value text-4xl text-emerald-600 mt-1" id="kpi-accuracy">98.7<span class="text-2xl">%</span></div>
+                            </div>
+                            <i class="fa-solid fa-shield-alt text-3xl text-emerald-500 mt-1"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl p-4 shadow-sm card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="text-xs text-slate-500">รายการเคลื่อนไหววันนี้</div>
+                                <div class="metric-value text-4xl text-amber-600 mt-1" id="kpi-movements">12</div>
+                            </div>
+                            <i class="fa-solid fa-exchange-alt text-3xl text-amber-500 mt-1"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl p-4 shadow-sm card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="text-xs text-slate-500">SKU ที่มีสต็อก</div>
+                                <div class="metric-value text-4xl text-slate-800 mt-1" id="kpi-skus">6</div>
+                            </div>
+                            <i class="fa-solid fa-boxes text-3xl text-slate-400 mt-1"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <div class="font-semibold text-slate-700">รายการเคลื่อนไหวล่าสุด</div>
+                        <button onclick="showSection('section-history')" 
+                                class="text-teal-600 text-sm font-medium flex items-center gap-x-1">
+                            ดูทั้งหมด <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="recent-transactions" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- ========== SECTION: LOCATIONS ========== -->
+            <div id="section-locations" class="section px-5 pt-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="header-font text-2xl font-bold text-slate-800">ตำแหน่งเก็บสินค้า</div>
+                    <button onclick="showAddLocationModal()" 
+                            class="bg-teal-600 hover:bg-teal-700 text-white text-sm px-4 py-2 rounded-2xl flex items-center gap-x-2 shadow-sm active:scale-95 transition-all">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>เพิ่มตำแหน่ง</span>
+                    </button>
+                </div>
+
+                <div class="relative mb-4">
+                    <input type="text" id="location-search" placeholder="ค้นหาตำแหน่ง..." 
+                           onkeyup="filterLocations()"
+                           class="w-full bg-white border border-slate-200 focus:border-teal-400 rounded-3xl pl-11 py-3 text-sm outline-none">
+                    <i class="fa-solid fa-search absolute left-4 top-4 text-slate-400"></i>
+                </div>
+
+                <div id="locations-list" class="space-y-2.5"></div>
+            </div>
+
+            <!-- ========== SECTION: PRODUCTS ========== -->
+            <div id="section-products" class="section px-5 pt-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="header-font text-2xl font-bold text-slate-800">รายการสินค้า</div>
+                </div>
+
+                <div class="relative mb-4">
+                    <input type="text" id="product-search" placeholder="ค้นหาสินค้า / SKU / บาร์โค้ด เพื่อดูว่าอยู่ Location ไหน..." 
+                           onkeyup="searchProductLocation()"
+                           class="w-full bg-white border border-slate-200 focus:border-teal-400 rounded-3xl pl-11 py-3 text-sm outline-none">
+                    <i class="fa-solid fa-search absolute left-4 top-4 text-slate-400"></i>
+                </div>
+
+                <!-- Search Result: แสดงว่า สินค้าอยู่ Location ไหน -->
+                <div id="product-location-result" class="mb-4 hidden">
+                    <div class="bg-white rounded-3xl p-4 shadow-sm">
+                        <div class="font-semibold text-slate-700 mb-2" id="search-result-title"></div>
+                        <div id="search-result-locations" class="space-y-2 text-sm"></div>
+                    </div>
+                </div>
+
+                <div id="products-list" class="space-y-2.5"></div>
+            </div>
+
+            <!-- ========== SECTION: PUTAWAY (รับเข้า/จัดเก็บ) ========== -->
+            <div id="section-putaway" class="section px-5 pt-5">
+                <div class="header-font text-2xl font-bold text-slate-800 mb-1">รับเข้า / จัดเก็บสินค้า</div>
+                <div class="text-sm text-slate-500 mb-5">สแกนบาร์โค้ดสินค้า → เลือกตำแหน่ง → ยืนยัน</div>
+
+                <div class="bg-white rounded-3xl p-5 shadow-sm mb-4">
+                    <!-- New flow: Scan Location first for Putaway -->
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">สแกนบาร์โค้ดตำแหน่ง (Location) - ขั้นตอนแรก</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="putaway-location-input" placeholder="PKG-A-01-01-001" 
+                                   class="scan-input flex-1 text-center font-mono">
+                            <button onclick="startRealScan('location')" 
+                                    class="bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white px-5 rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-qrcode text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">สแกนบาร์โค้ดสินค้า - ขั้นตอนที่สอง</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="putaway-product-input" placeholder="8851234567890" 
+                                   class="scan-input flex-1 text-center font-mono">
+                            <button onclick="startRealScan('product')" 
+                                    class="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-5 rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-barcode text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1.5">จำนวนที่จัดเก็บ</label>
+                            <input type="number" id="putaway-qty" value="10" class="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1.5">Lot Number</label>
+                            <input type="text" id="putaway-lot" placeholder="LOT-20260628-001" class="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">วันที่รับเข้า (อัตโนมัติ)</label>
+                        <!-- วันที่รับเข้าจะบันทึกอัตโนมัติจากเวลาที่ทำ transaction -->
+                    </div>
+                </div>
+
+                <button onclick="confirmPutaway()" 
+                        class="w-full bg-teal-600 hover:bg-teal-700 active:bg-teal-800 transition-all text-white font-semibold py-4 rounded-3xl flex items-center justify-center gap-x-2 text-lg shadow-lg shadow-teal-600/30">
+                    <i class="fa-solid fa-check-double"></i>
+                    <span>ยืนยันการจัดเก็บ</span>
+                </button>
+            </div>
+
+            <!-- ========== SECTION: PICKING ========== -->
+            <div id="section-picking" class="section px-5 pt-5">
+                <div class="header-font text-2xl font-bold text-slate-800 mb-1">หยิบสินค้า (Picking)</div>
+                <div class="text-sm text-slate-500 mb-5">สแกนตำแหน่ง → สแกนสินค้า → ยืนยันจำนวน</div>
+
+                <div class="bg-white rounded-3xl p-5 shadow-sm mb-4">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">สแกนบาร์โค้ดตำแหน่ง</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="picking-location-barcode" placeholder="PKG-A-01-01-001" 
+                                   class="scan-input flex-1 text-center font-mono">
+                            <button onclick="simulateScan('picking-location-barcode', 'location')" 
+                                    class="bg-slate-800 hover:bg-black text-white px-5 rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-camera text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="picking-location-info" class="hidden mb-4 p-3 bg-amber-50 rounded-2xl text-sm"></div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">สแกนบาร์โค้ดสินค้า</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="picking-product-barcode" placeholder="8851234567890" 
+                                   class="scan-input flex-1 text-center font-mono">
+                            <button onclick="simulateScan('picking-product-barcode', 'product')" 
+                                    class="bg-slate-800 hover:bg-black text-white px-5 rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-camera text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="picking-product-info" class="hidden mb-4 p-3 bg-teal-50 rounded-2xl text-sm"></div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">จำนวนที่หยิบ</label>
+                        <input type="number" id="picking-qty" value="5" class="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm">
+                    </div>
+                </div>
+
+                <button onclick="confirmPicking()" 
+                        class="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 transition-all text-white font-semibold py-4 rounded-3xl flex items-center justify-center gap-x-2 text-lg shadow-lg shadow-amber-500/30">
+                    <i class="fa-solid fa-hand-holding-box"></i>
+                    <span>ยืนยันการหยิบสินค้า</span>
+                </button>
+            </div>
+
+            <!-- ========== SECTION: HISTORY ========== -->
+            <div id="section-history" class="section px-5 pt-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="header-font text-2xl font-bold text-slate-800">ประวัติการทำรายการ</div>
+                </div>
+                <div id="history-list" class="space-y-3"></div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-white border-t border-slate-100 px-2 py-1 z-50">
+            <div class="flex justify-around">
+                <button onclick="showSection('section-dashboard')" class="nav-btn flex flex-col items-center py-2 px-4 text-xs font-medium text-slate-500 active:text-teal-600" data-section="dashboard">
+                    <i class="fa-solid fa-home text-xl mb-0.5"></i>
+                    <span>หน้าแรก</span>
+                </button>
+                <button onclick="showSection('section-locations')" class="nav-btn flex flex-col items-center py-2 px-4 text-xs font-medium text-slate-500 active:text-teal-600" data-section="locations">
+                    <i class="fa-solid fa-map-marker-alt text-xl mb-0.5"></i>
+                    <span>Location</span>
+                </button>
+                <button onclick="showSection('section-products')" class="nav-btn flex flex-col items-center py-2 px-4 text-xs font-medium text-slate-500 active:text-teal-600" data-section="products">
+                    <i class="fa-solid fa-boxes text-xl mb-0.5"></i>
+                    <span>สินค้า</span>
+                </button>
+                <button onclick="showSection('section-putaway')" class="nav-btn flex flex-col items-center py-2 px-4 text-xs font-medium text-slate-500 active:text-teal-600" data-section="putaway">
+                    <i class="fa-solid fa-arrow-down text-xl mb-0.5"></i>
+                    <span>รับเข้า</span>
+                </button>
+                <button onclick="showSection('section-picking')" class="nav-btn flex flex-col items-center py-2 px-4 text-xs font-medium text-slate-500 active:text-teal-600" data-section="picking">
+                    <i class="fa-solid fa-hand-holding-box text-xl mb-0.5"></i>
+                    <span>หยิบ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 max-w-[480px] w-full px-5 z-[100]">
+        <!-- Barcode Scanner Modal for Location (added for real camera scanning) -->
+        <div id="scanner-modal" class="hidden fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4" style="display:none;">
+            <div class="bg-white rounded-3xl w-full max-w-[480px] overflow-hidden">
+                <div class="px-5 py-4 border-b flex justify-between items-center">
+                    <div class="font-semibold text-lg">สแกนบาร์โค้ดตำแหน่ง</div>
+                    <button onclick="stopScanner()" class="text-slate-500 hover:text-red-500 text-2xl leading-none">&times;</button>
+                </div>
+                <div class="p-4">
+                    <div id="qr-reader" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+                    <div class="text-center text-xs text-slate-500 mt-3">ชี้กล้องไปที่บาร์โค้ดตำแหน่ง (Location)</div>
+                </div>
+                <div class="px-5 py-4 bg-slate-50 flex gap-3">
+                    <button onclick="stopScanner()" class="flex-1 py-3 rounded-2xl bg-white border font-medium text-slate-700">ยกเลิก</button>
+                </div>
+            </div>
+        </div>
+        <div class="bg-emerald-600 text-white px-5 py-3.5 rounded-3xl shadow-xl flex items-center gap-x-3 success-toast">
+            <i class="fa-solid fa-check-circle text-xl"></i>
+            <span id="toast-message" class="font-medium"></span>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script
+        function initializeTailwind() {
+            document.documentElement.style.setProperty('--accent', '#0D9488');
+        }
+
+        // Sample Data (from previous Excel template)
+        let locations = [
+            { code: "PKG-A-01-01-001", zone: "PKG", rack: "01", shelf: "01", bin: "001", desc: "กล่องกระดาษลูกฟูก ขนาดเล็ก", capacity: 500, status: "ใช้งาน" },
+            { code: "PKG-A-01-01-002", zone: "PKG", rack: "01", shelf: "01", bin: "002", desc: "กล่องกระดาษลูกฟูก ขนาดกลาง", capacity: 400, status: "ใช้งาน" },
+            { code: "PKG-A-01-02-001", zone: "PKG", rack: "01", shelf: "02", bin: "001", desc: "ฟิล์มยืด (Stretch Film) ม้วน 50cm", capacity: 200, status: "ใช้งาน" },
+            { code: "PKG-A-02-01-001", zone: "PKG", rack: "02", shelf: "01", bin: "001", desc: "เทปกาว OPP 2 นิ้ว", capacity: 300, status: "ใช้งาน" },
+            { code: "PKG-A-02-02-005", zone: "PKG", rack: "02", shelf: "02", bin: "005", desc: "ฉลากสินค้า (Label) ขนาด A5", capacity: 150, status: "ใช้งาน" },
+            { code: "PKG-A-03-01-010", zone: "PKG", rack: "03", shelf: "01", bin: "010", desc: "ถุงพลาสติก PE ขนาด 10x15", capacity: 800, status: "ใช้งาน" },
+            { code: "PKG-B-01-01-001", zone: "PKG", rack: "B1", shelf: "01", bin: "001", desc: "วัสดุบรรจุภัณฑ์สำรอง", capacity: 1000, status: "ใช้งาน" },
+            { code: "FG-C-01-01-001", zone: "FG", rack: "01", shelf: "01", bin: "001", desc: "สินค้าสำเร็จรูป - กล่อง A", capacity: 120, status: "ใช้งาน" },
+        ];
+
+        let products = [
+            { sku: "PKG-BOX-S", barcode: "8851234567890", name: "กล่องกระดาษลูกฟูก ขนาดเล็ก 20x15x10", category: "กล่องกระดาษ", unit: "กล่อง", minStock: 100, preferredLocation: "PKG-A-01-01-001" },
+            { sku: "PKG-BOX-M", barcode: "8851234567891", name: "กล่องกระดาษลูกฟูก ขนาดกลาง 30x25x15", category: "กล่องกระดาษ", unit: "กล่อง", minStock: 80, preferredLocation: "PKG-A-01-01-002" },
+            { sku: "PKG-FILM-50", barcode: "8851234567900", name: "ฟิล์มยืด Stretch Film ม้วน 50cm x 500m", category: "ฟิล์มยืด", unit: "ม้วน", minStock: 50, preferredLocation: "PKG-A-01-02-001" },
+            { sku: "PKG-TAPE-OPP2", barcode: "8851234567910", name: "เทปกาว OPP 2 นิ้ว x 100 หลา", category: "เทปกาว", unit: "ม้วน", minStock: 100, preferredLocation: "PKG-A-02-01-001" },
+            { sku: "PKG-LABEL-A5", barcode: "8851234567920", name: "ฉลากสินค้า Label A5 (100 แผ่น/แพ็ค)", category: "ฉลาก", unit: "แพ็ค", minStock: 30, preferredLocation: "PKG-A-02-02-005" },
+            { sku: "PKG-BAG-PE10", barcode: "8851234567930", name: "ถุงพลาสติก PE 10x15 ซม. (500 ใบ/แพ็ค)", category: "ถุงพลาสติก", unit: "แพ็ค", minStock: 200, preferredLocation: "PKG-A-03-01-010" },
+        ];
+
+        let inventory = [
+            { location: "PKG-A-01-01-001", sku: "PKG-BOX-S", qty: 320, lastUpdated: "2026-06-25 09:15" },
+            { location: "PKG-A-01-01-002", sku: "PKG-BOX-M", qty: 185, lastUpdated: "2026-06-24 14:30" },
+            { location: "PKG-A-01-02-001", sku: "PKG-FILM-50", qty: 95, lastUpdated: "2026-06-26 08:45" },
+            { location: "PKG-A-02-01-001", sku: "PKG-TAPE-OPP2", qty: 245, lastUpdated: "2026-06-23 11:20" },
+            { location: "PKG-A-02-02-005", sku: "PKG-LABEL-A5", qty: 68, lastUpdated: "2026-06-25 16:00" },
+            { location: "PKG-A-03-01-010", sku: "PKG-BAG-PE10", qty: 520, lastUpdated: "2026-06-22 10:10" },
+        ];
+
+        let transactions = [
+            { id: "TR-20260628-001", datetime: "2026-06-28 14:22", type: "รับเข้า", sku: "PKG-BOX-S", fromLoc: "", toLoc: "PKG-A-01-01-001", qty: 50, ref: "PO-2026-0628-001", user: "Jessica" },
+            { id: "TR-20260628-002", datetime: "2026-06-28 13:05", type: "หยิบออก", sku: "PKG-FILM-50", fromLoc: "PKG-A-01-02-001", toLoc: "", qty: 10, ref: "SO-2026-0628-089", user: "สมชาย" },
+        ];
+
+        // Load from localStorage if exists
+        function loadData() {
+            const savedLocations = localStorage.getItem('wms_locations');
+            if (savedLocations) locations = JSON.parse(savedLocations);
+            
+            const savedInventory = localStorage.getItem('wms_inventory');
+            if (savedInventory) inventory = JSON.parse(savedInventory);
+            
+            const savedTransactions = localStorage.getItem('wms_transactions');
+            if (savedTransactions) transactions = JSON.parse(savedTransactions);
+        }
+
+        function saveData() {
+            localStorage.setItem('wms_locations', JSON.stringify(locations));
+            localStorage.setItem('wms_inventory', JSON.stringify(inventory));
+            localStorage.setItem('wms_transactions', JSON.stringify(transactions));
+        }
+
+        // Show specific section
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            
+            // Show target
+            const target = document.getElementById(sectionId);
+            if (target) target.classList.add('active');
+            
+            // Update nav active state
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-teal-600', 'font-semibold');
+                btn.classList.add('text-slate-500');
+                if (btn.dataset.section === sectionId.replace('section-', '')) {
+                    btn.classList.add('text-teal-600', 'font-semibold');
+                    btn.classList.remove('text-slate-500');
+                }
+            });
+
+            // Refresh content when switching
+            if (sectionId === 'section-locations') renderLocations();
+            if (sectionId === 'section-products') renderProducts();
+            if (sectionId === 'section-history') renderHistory();
+            if (sectionId === 'section-dashboard') renderDashboard();
+        }
+
+        // Render Dashboard
+        function renderDashboard() {
+            // Update KPIs
+            document.getElementById('kpi-locations').innerText = locations.length;
+            document.getElementById('kpi-skus').innerText = products.length;
+            document.getElementById('kpi-movements').innerText = transactions.length;
+            
+            // Recent transactions (last 3)
+            const container = document.getElementById('recent-transactions');
+            container.innerHTML = '';
+            
+            const recent = [...transactions].reverse().slice(0, 3);
+            
+            recent.forEach(tx => {
+                const div = document.createElement('div');
+                div.className = `bg-white rounded-2xl p-3.5 flex items-center gap-x-3.5 shadow-sm card`;
+                div.innerHTML = `
+                    <div class="w-9 h-9 flex-shrink-0 rounded-2xl flex items-center justify-center ${tx.type.includes('รับ') ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}">
+                        <i class="fa-solid ${tx.type.includes('รับ') ? 'fa-arrow-down' : 'fa-hand-holding-box'}"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between">
+                            <div class="font-semibold text-sm">${tx.type}</div>
+                            <div class="text-xs text-slate-400">${tx.datetime.split(' ')[1]}</div>
+                        </div>
+                        <div class="text-xs text-slate-500 truncate">${tx.sku} • ${tx.qty} ${getUnit(tx.sku)}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function getUnit(sku) {
+            const p = products.find(x => x.sku === sku);
+            return p ? p.unit : 'หน่วย';
+        }
+
+        // Render Locations
+        function renderLocations(filtered = null) {
+            const container = document.getElementById('locations-list');
+            container.innerHTML = '';
+            
+            const data = filtered || locations;
+            
+            data.forEach(loc => {
+                const invCount = inventory.filter(i => i.location === loc.code).length;
+                const totalQty = inventory.filter(i => i.location === loc.code).reduce((sum, i) => sum + i.qty, 0);
+                
+                const div = document.createElement('div');
+                div.className = `bg-white rounded-3xl p-4 shadow-sm flex gap-4 card`;
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <div class="flex items-center gap-x-2 mb-1">
+                            <span class="location-pill">${loc.code}</span>
+                            <span class="text-xs px-2 py-0.5 rounded-full ${loc.status === 'ใช้งาน' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200'}">${loc.status}</span>
+                        </div>
+                        <div class="font-semibold text-slate-700">${loc.desc}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">Zone ${loc.zone} • Rack ${loc.rack} • Shelf ${loc.shelf} • Bin ${loc.bin}</div>
+                        
+                        <div class="flex items-center gap-x-4 mt-3 text-xs">
+                            <div><span class="font-semibold text-teal-600">${totalQty}</span> <span class="text-slate-500">หน่วย</span></div>
+                            <div><span class="font-semibold">${invCount}</span> <span class="text-slate-500">SKU</span></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-between items-end text-right">
+                        <div class="text-[10px] text-slate-400">ความจุ</div>
+                        <div class="font-bold text-lg text-slate-700">${loc.capacity}</div>
+                        <button onclick="viewLocationInventory('${loc.code}')" class="mt-auto text-xs bg-teal-50 hover:bg-teal-100 text-teal-700 px-3 py-1 rounded-2xl font-medium">ดูสต็อก</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function filterLocations() {
+            const term = document.getElementById('location-search').value.toLowerCase();
+            const filtered = locations.filter(l => 
+                l.code.toLowerCase().includes(term) || 
+                l.desc.toLowerCase().includes(term)
+            );
+            renderLocations(filtered);
+        }
+
+        // Render Products
+        function renderProducts(filtered = null) {
+            const container = document.getElementById('products-list');
+            container.innerHTML = '';
+            
+            const data = filtered || products;
+            
+            data.forEach(prod => {
+                const invItem = inventory.find(i => i.sku === prod.sku);
+                const currentQty = invItem ? invItem.qty : 0;
+                const statusColor = currentQty < prod.minStock ? 'text-amber-600' : 'text-emerald-600';
+                
+                const div = document.createElement('div');
+                div.className = `bg-white rounded-3xl p-4 shadow-sm card`;
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <div class="flex-1 pr-3">
+                            <div class="font-semibold text-slate-700">${prod.name}</div>
+                            <div class="flex items-center gap-x-2 mt-1">
+                                <span class="font-mono text-xs bg-slate-100 px-2 py-px rounded">${prod.barcode}</span>
+                                <span class="text-xs text-slate-500">${prod.sku}</span>
+                            </div>
+                            <div class="text-xs mt-2 text-slate-500">${prod.category} • ${prod.unit}</div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <div class="text-xs text-slate-400">คงเหลือ</div>
+                            <div class="font-bold text-xl ${statusColor}">${currentQty}</div>
+                            <div class="text-[10px] text-slate-400">Min ${prod.minStock}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t flex items-center justify-between text-xs">
+                        <div class="text-teal-600 font-medium">${prod.preferredLocation}</div>
+                        <button onclick="quickPutaway('${prod.barcode}')" class="text-teal-600 hover:text-teal-700 font-medium flex items-center gap-x-1">
+                            <i class="fa-solid fa-plus text-xs"></i> รับเข้า
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function filterProducts() {
+            const term = document.getElementById('product-search').value.toLowerCase();
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(term) || 
+                p.barcode.includes(term) || 
+                p.sku.toLowerCase().includes(term)
+            );
+            renderProducts(filtered);
+        }
+
+        // ค้นหาสินค้าว่าอยู่ Location ไหน (ใหม่)
+        function searchProductLocation() {
+            const term = document.getElementById('product-search').value.trim().toLowerCase();
+            const resultBox = document.getElementById('product-location-result');
+            const titleEl = document.getElementById('search-result-title');
+            const locationsEl = document.getElementById('search-result-locations');
+
+            if (!term) {
+                resultBox.classList.add('hidden');
+                renderProducts(products); // แสดงรายการปกติ
+                return;
+            }
+
+            // ค้นหาสินค้า
+            const matchedProducts = products.filter(p => 
+                p.name.toLowerCase().includes(term) || 
+                p.barcode.toLowerCase().includes(term) || 
+                p.sku.toLowerCase().includes(term)
+            );
+
+            if (matchedProducts.length === 0) {
+                resultBox.classList.remove('hidden');
+                titleEl.innerHTML = `ไม่พบสินค้า "<strong>${term}</strong>"`;
+                locationsEl.innerHTML = `<div class="text-slate-400">ลองค้นด้วย SKU หรือชื่อสินค้า</div>`;
+                return;
+            }
+
+            // แสดงผล Location ที่มีสินค้านี้
+            resultBox.classList.remove('hidden');
+            titleEl.innerHTML = `ผลการค้นหา: <strong>${matchedProducts[0].name}</strong>`;
+
+            let html = '';
+            let found = false;
+
+            matchedProducts.forEach(prod => {
+                const locationsWithThisProduct = inventory.filter(i => i.sku === prod.sku && i.qty > 0);
+
+                if (locationsWithThisProduct.length > 0) {
+                    found = true;
+                    html += `<div class="font-medium text-teal-700 mb-1">${prod.sku} (${prod.barcode})</div>`;
+                    
+                    locationsWithThisProduct.forEach(inv => {
+                        const locInfo = locations.find(l => l.code === inv.location);
+                        html += `
+                            <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-2xl mb-1">
+                                <div>
+                                    <span class="font-mono text-sm">${inv.location}</span>
+                                    ${locInfo ? `<span class="text-xs text-slate-500">(${locInfo.desc})</span>` : ''}
+                                </div>
+                                <div class="font-bold text-emerald-600">${inv.qty} ${prod.unit}</div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+
+            if (!found) {
+                html = `<div class="text-amber-600">สินค้านี้ยังไม่มีในคลัง (หรือสต็อกเป็น 0)</div>`;
+            }
+
+            locationsEl.innerHTML = html;
+        }
+
+        // Simulate barcode scan (for demo)
+        function simulateScan(inputId, type) {
+            const input = document.getElementById(inputId);
+            
+            if (type === 'product') {
+                // Pick a random product barcode
+                const randomProd = products[Math.floor(Math.random() * products.length)];
+                input.value = randomProd.barcode;
+                
+                // Auto fill info if in putaway or picking
+                if (inputId === 'putaway-barcode') {
+                    showPutawayProductInfo(randomProd);
+                }
+                if (inputId === 'picking-product-barcode') {
+                    showPickingProductInfo(randomProd);
+                }
+            } else if (type === 'location') {
+                const randomLoc = locations[Math.floor(Math.random() * locations.length)];
+                input.value = randomLoc.code;
+                
+                if (inputId === 'picking-location-barcode') {
+                    showPickingLocationInfo(randomLoc);
+                }
+            }
+            
+            // Visual feedback
+            input.style.borderColor = '#10B981';
+            setTimeout(() => {
+                input.style.borderColor = '#0D9488';
+            }, 800);
+        }
+
+        function showPutawayProductInfo(product) {
+            const infoDiv = document.getElementById('putaway-product-info');
+            infoDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-semibold">${product.name}</div>
+                        <div class="text-xs text-teal-700 font-mono">${product.barcode} • ${product.sku}</div>
+                    </div>
+                    <i class="fa-solid fa-check-circle text-emerald-500 text-xl"></i>
+                </div>
+            `;
+            infoDiv.classList.remove('hidden');
+        }
+
+        function showPickingLocationInfo(location) {
+            const infoDiv = document.getElementById('picking-location-info');
+            const itemsInLoc = inventory.filter(i => i.location === location.code);
+            
+            infoDiv.innerHTML = `
+                <div>
+                    <div class="font-semibold">${location.code}</div>
+                    <div class="text-xs">${location.desc}</div>
+                    <div class="text-xs mt-1 text-amber-600">${itemsInLoc.length} รายการในตำแหน่งนี้</div>
+                </div>
+            `;
+            infoDiv.classList.remove('hidden');
+        }
+
+        function showPickingProductInfo(product) {
+            const infoDiv = document.getElementById('picking-product-info');
+            const inv = inventory.find(i => i.sku === product.sku);
+            const qty = inv ? inv.qty : 0;
+            
+            infoDiv.innerHTML = `
+                <div class="flex justify-between">
+                    <div>
+                        <div class="font-semibold">${product.name}</div>
+                        <div class="text-xs">คงเหลือในคลัง: <span class="font-bold">${qty}</span> ${product.unit}</div>
+                    </div>
+                    <i class="fa-solid fa-check-circle text-emerald-500 text-xl"></i>
+                </div>
+            `;
+            infoDiv.classList.remove('hidden');
+        }
+
+        // Confirm Putaway
+        function confirmPutaway() {
+            const barcode = document.getElementById('putaway-barcode').value.trim();
+            const locationCode = document.getElementById('putaway-location').value;
+            const qty = parseInt(document.getElementById('putaway-qty').value) || 1;
+            const ref = document.getElementById('putaway-ref').value.trim() || 'MANUAL';
+            
+            if (!barcode || !locationCode) {
+                alert('กรุณากรอกบาร์โค้ดสินค้าและเลือกตำแหน่ง');
+                return;
+            }
+            
+            const product = products.find(p => p.barcode === barcode);
+            if (!product) {
+                alert('ไม่พบสินค้าจากบาร์โค้ดนี้');
+                return;
+            }
+            
+            // Update or create inventory
+            let invItem = inventory.find(i => i.location === locationCode && i.sku === product.sku);
+            if (invItem) {
+                invItem.qty += qty;
+                invItem.lastUpdated = new Date().toISOString().slice(0,16).replace('T', ' ');
+            } else {
+                inventory.push({
+                    location: locationCode,
+                    sku: product.sku,
+                    qty: qty,
+                    lastUpdated: new Date().toISOString().slice(0,16).replace('T', ' ')
+                });
+            }
+            
+            // Add transaction
+            const newTx = {
+                id: `TR-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(transactions.length + 1).padStart(3,'0')}`,
+                datetime: new Date().toLocaleString('sv-SE').slice(0,16).replace('T', ' '),
+                type: "รับเข้า",
+                sku: product.sku,
+                fromLoc: "",
+                toLoc: locationCode,
+                qty: qty,
+                ref: ref,
+                user: "Jessica"
+            };
+            transactions.unshift(newTx);
+            
+            saveData();
+            
+            // Success
+            showToast(`จัดเก็บ ${product.name} จำนวน ${qty} ${product.unit} เข้าตำแหน่ง ${locationCode} สำเร็จ`);
+            
+            // Reset form
+            document.getElementById('putaway-barcode').value = '';
+            document.getElementById('putaway-product-info').classList.add('hidden');
+            document.getElementById('putaway-qty').value = '10';
+            
+            // Refresh dashboard
+            renderDashboard();
+        }
+
+        function confirmPicking() {
+            const locBarcode = document.getElementById('picking-location-barcode').value.trim();
+            const prodBarcode = document.getElementById('picking-product-barcode').value.trim();
+            const qty = parseInt(document.getElementById('picking-qty').value) || 1;
+            
+            if (!locBarcode || !prodBarcode) {
+                alert('กรุณาสแกนตำแหน่งและสินค้า');
+                return;
+            }
+            
+            const product = products.find(p => p.barcode === prodBarcode);
+            if (!product) {
+                alert('ไม่พบสินค้า');
+                return;
+            }
+            
+            const invItem = inventory.find(i => i.location === locBarcode && i.sku === product.sku);
+            if (!invItem || invItem.qty < qty) {
+                alert('สต็อกในตำแหน่งนี้ไม่พอ');
+                return;
+            }
+            
+            // Deduct
+            invItem.qty -= qty;
+            invItem.lastUpdated = new Date().toISOString().slice(0,16).replace('T', ' ');
+            
+            // Transaction
+            const newTx = {
+                id: `TR-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(transactions.length + 1).padStart(3,'0')}`,
+                datetime: new Date().toLocaleString('sv-SE').slice(0,16).replace('T', ' '),
+                type: "หยิบออก",
+                sku: product.sku,
+                fromLoc: locBarcode,
+                toLoc: "",
+                qty: qty,
+                ref: "PICKING-" + Date.now(),
+                user: "Jessica"
+            };
+            transactions.unshift(newTx);
+            
+            saveData();
+            
+            showToast(`หยิบ ${product.name} จำนวน ${qty} ${product.unit} จาก ${locBarcode} สำเร็จ`);
+            
+            // Reset
+            document.getElementById('picking-location-barcode').value = '';
+            document.getElementById('picking-product-barcode').value = '';
+            document.getElementById('picking-location-info').classList.add('hidden');
+            document.getElementById('picking-product-info').classList.add('hidden');
+            document.getElementById('picking-qty').value = '5';
+            
+            renderDashboard();
+        }
+
+        function quickPutaway(barcode) {
+            showSection('section-putaway');
+            document.getElementById('putaway-barcode').value = barcode;
+            
+            const product = products.find(p => p.barcode === barcode);
+            if (product) {
+                showPutawayProductInfo(product);
+                // Auto select preferred location
+                setTimeout(() => {
+                    const select = document.getElementById('putaway-location');
+                    if (select) select.value = product.preferredLocation;
+                }, 300);
+            }
+        }
+
+        function viewLocationInventory(locationCode) {
+            const loc = locations.find(l => l.code === locationCode);
+            if (!loc) return;
+            
+            const items = inventory.filter(i => i.location === locationCode);
+            
+            let html = `<div class="p-1"><div class="font-bold text-lg mb-1">${locationCode}</div><div class="text-sm text-slate-600 mb-3">${loc.desc}</div>`;
+            
+            if (items.length === 0) {
+                html += `<div class="text-center py-6 text-slate-400">ไม่มีสินค้าในตำแหน่งนี้</div>`;
+            } else {
+                html += `<div class="space-y-2">`;
+                items.forEach(item => {
+                    const prod = products.find(p => p.sku === item.sku);
+                    html += `
+                        <div class="flex justify-between bg-white p-3 rounded-2xl text-sm">
+                            <div>${prod ? prod.name : item.sku}</div>
+                            <div class="font-bold">${item.qty} ${prod ? prod.unit : ''}</div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            html += `</div>`;
+            
+            // Simple modal
+            const modal = document.createElement('div');
+            modal.className = `fixed inset-0 bg-black/60 flex items-end z-[200]`;
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-[480px] mx-auto rounded-t-3xl p-5 max-h-[70vh] overflow-auto">
+                    ${html}
+                    <button onclick="this.closest('.fixed').remove()" class="mt-4 w-full py-3 bg-slate-100 rounded-2xl font-medium">ปิด</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Populate location dropdown in putaway
+        function populateLocationSelect() {
+            const select = document.getElementById('putaway-location');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- เลือกตำแหน่ง --</option>';
+            locations.forEach(loc => {
+                const opt = document.createElement('option');
+                opt.value = loc.code;
+                opt.textContent = `${loc.code} — ${loc.desc}`;
+                select.appendChild(opt);
+            });
+        }
+
+        // Render full history
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            container.innerHTML = '';
+            
+            if (transactions.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400">ยังไม่มีประวัติรายการ</div>`;
+                return;
+            }
+            
+            transactions.forEach(tx => {
+                const prod = products.find(p => p.sku === tx.sku);
+                const div = document.createElement('div');
+                div.className = `bg-white p-4 rounded-3xl shadow-sm transaction-item`;
+                
+                let icon = tx.type.includes('รับ') ? 'fa-arrow-down text-emerald-500' : 'fa-hand-holding-box text-amber-500';
+                let color = tx.type.includes('รับ') ? 'emerald' : 'amber';
+                
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-x-2">
+                                <i class="fa-solid ${icon} text-lg"></i>
+                                <span class="font-semibold">${tx.type}</span>
+                            </div>
+                            <div class="text-sm mt-1">${prod ? prod.name : tx.sku}</div>
+                            <div class="text-xs text-slate-500 mt-0.5 font-mono">${tx.id}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-lg">${tx.qty}</div>
+                            <div class="text-xs text-slate-400">${tx.datetime.split(' ')[1]}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t text-xs flex justify-between text-slate-500">
+                        <div>${tx.fromLoc ? 'จาก ' + tx.fromLoc : ''} ${tx.toLoc ? 'ไป ' + tx.toLoc : ''}</div>
+                        <div>${tx.ref}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const msg = document.getElementById('toast-message');
+            msg.innerText = message;
+            toast.classList.remove('hidden');
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.transition = 'all 0.3s ease';
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    toast.style.opacity = '1';
+                    toast.style.transition = '';
+                    toast.style.display = 'none';
+                    toast.classList.add('hidden');
+                }, 300);
+            }, 2600);
+        }
+
+        function showAddLocationModal() {
+            const code = prompt('รหัสตำแหน่งใหม่ (เช่น PKG-A-04-01-001):');
+            if (!code) return;
+            
+            const desc = prompt('คำอธิบายตำแหน่ง:', 'ตำแหน่งใหม่');
+            if (!desc) return;
+            
+            const newLoc = {
+                code: code,
+                zone: code.split('-')[0] || 'PKG',
+                rack: code.split('-')[1] || '01',
+                shelf: code.split('-')[2] || '01',
+                bin: code.split('-')[3] || '001',
+                desc: desc,
+                capacity: 200,
+                status: "ใช้งาน"
+            };
+            
+            locations.push(newLoc);
+            saveData();
+            renderLocations();
+            showToast('เพิ่มตำแหน่งใหม่สำเร็จ');
+        }
+
+        // ==================== REAL BARCODE SCANNING (html5-qrcode) ====================
+        let html5QrCode = null;
+        let currentScanTarget = null; // 'location' or 'product'
+
+        function startRealScan(target) {
+            currentScanTarget = target;
+            const modal = document.getElementById('scanner-modal');
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+
+            const qrReader = document.getElementById('qr-reader');
+            qrReader.innerHTML = '';
+
+            html5QrCode = new Html5Qrcode("qr-reader");
+
+            const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => {
+                    const cleanText = decodedText.trim();
+                    
+                    if (currentScanTarget === 'location') {
+                        document.getElementById('putaway-location-input').value = cleanText;
+                        showToast('สแกนตำแหน่งสำเร็จ');
+                    } else if (currentScanTarget === 'product') {
+                        document.getElementById('putaway-product-input').value = cleanText;
+                        showToast('สแกนสินค้าสำเร็จ');
+                    }
+                    
+                    stopScanner();
+                },
+                (errorMessage) => {
+                    // ignore
+                }
+            ).catch(err => {
+                showToast('ไม่สามารถเปิดกล้องได้');
+                stopScanner();
+            });
+        }
+
+        function stopScanner() {
+            const modal = document.getElementById('scanner-modal');
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode = null;
+                }).catch(err => console.log(err));
+            }
+        }
+
+        function simulateScanSKU() {
+            // Simple simulation for SKU (can be enhanced later)
+            const input = document.getElementById('putaway-sku-input');
+            const randomProd = products[Math.floor(Math.random() * products.length)];
+            input.value = randomProd.sku;
+            showToast('จำลองสแกนสินค้า: ' + randomProd.sku);
+        }
+
+        // Update confirmPutaway to use new input IDs
+        function confirmPutaway() {
+            const locationCode = document.getElementById('putaway-location-input').value.trim();
+            const productCode = document.getElementById('putaway-product-input').value.trim();
+            const qty = parseInt(document.getElementById('putaway-qty').value) || 1;
+            const lotNumber = document.getElementById('putaway-lot').value.trim() || 'N/A';
+            const receivedDate = new Date().toISOString().slice(0,10); // วันที่ปัจจุบันอัตโนมัติ
+
+            if (!locationCode || !productCode) {
+                alert('กรุณาสแกนตำแหน่งและสแกนสินค้าก่อน');
+                return;
+            }
+
+            // Find product
+            let product = products.find(p => p.sku === productCode || p.barcode === productCode);
+            if (!product) {
+                product = { sku: productCode, barcode: productCode, name: productCode, unit: 'หน่วย' };
+            }
+
+            // Update or create inventory record
+            let invItem = inventory.find(i => i.location === locationCode && i.sku === product.sku);
+            if (invItem) {
+                invItem.qty += qty;
+            } else {
+                inventory.push({
+                    location: locationCode,
+                    sku: product.sku,
+                    qty: qty,
+                    lastUpdated: new Date().toISOString().slice(0,16).replace('T', ' ')
+                });
+            }
+
+            // Record transaction
+            const newTx = {
+                id: `TR-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(transactions.length + 1).padStart(3,'0')}`,
+                datetime: new Date().toLocaleString('sv-SE').slice(0,16).replace('T', ' '),
+                type: "รับเข้า (สแกน Location)",
+                sku: product.sku,
+                fromLoc: "",
+                toLoc: locationCode,
+                qty: qty,
+                lot: lotNumber,
+                receivedDate: receivedDate,
+                user: "Jessica"
+            };
+            transactions.unshift(newTx);
+
+            saveData();
+            showToast(`จัดเก็บ ${product.name} จำนวน ${qty} เข้าตำแหน่ง ${locationCode} สำเร็จ`);
+
+            // Reset form
+            document.getElementById('putaway-location-input').value = '';
+            document.getElementById('putaway-product-input').value = '';
+            document.getElementById('putaway-qty').value = '10';
+            document.getElementById('putaway-received-date').value = new Date().toISOString().slice(0,10);
+
+            renderDashboard();
+        }
+
+        // Initialize everything
+        function initializeApp() {
+            initializeTailwind();
+            loadData();
+            
+            // Initial renders
+            renderDashboard();
+            renderLocations();
+            renderProducts();
+            populateLocationSelect();
+            renderHistory();
+            
+            // Set first nav active
+            const firstNav = document.querySelector('.nav-btn');
+            if (firstNav) firstNav.classList.add('text-teal-600', 'font-semibold');
+            
+            // Demo tip toast on first load (only once)
+            if (!localStorage.getItem('wms_first_load')) {
+                setTimeout(() => {
+                    showToast('ยินดีต้อนรับ! ลองสแกนบาร์โค้ดด้วยปุ่มกล้องได้เลย');
+                    localStorage.setItem('wms_first_load', 'true');
+                }, 1800);
+            }
+            
+            // Make sure dashboard is shown
+            document.getElementById('section-dashboard').classList.add('active');
+            
+            // Keyboard support for demo
+            console.log('%c[WMS Mobile] Prototype initialized. Data saved in localStorage.', 'color:#64748b');
+        }
+
+        // Boot app
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
