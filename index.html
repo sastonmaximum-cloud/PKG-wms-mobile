@@ -1254,17 +1254,24 @@
         let currentScanTarget = null; // 'location' or 'product'
 
         function startRealScan(target) {
-            currentScanTarget = target;
-            const modal = document.getElementById('scanner-modal');
-            modal.style.display = 'flex';
-            modal.classList.remove('hidden');
+    currentScanTarget = target;
+    const modal = document.getElementById('scanner-modal');
+    const qrReader = document.getElementById('qr-reader');
 
-            const qrReader = document.getElementById('qr-reader');
-            qrReader.innerHTML = '';
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    qrReader.innerHTML = '<div style="text-align:center; padding:40px 0; color:#64748b;">กำลังเปิดกล้อง...</div>';
 
+    // รอให้ DOM พร้อมก่อน
+    setTimeout(() => {
+        try {
             html5QrCode = new Html5Qrcode("qr-reader");
 
-            const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 150 },
+                aspectRatio: 1.0
+            };
 
             html5QrCode.start(
                 { facingMode: "environment" },
@@ -1283,13 +1290,24 @@
                     stopScanner();
                 },
                 (errorMessage) => {
-                    // ignore
+                    // ไม่ต้องทำอะไร (เป็นการสแกนต่อเนื่อง)
                 }
             ).catch(err => {
-                showToast('ไม่สามารถเปิดกล้องได้');
-                stopScanner();
+                console.error(err);
+                qrReader.innerHTML = `
+                    <div style="text-align:center; padding:30px; color:#ef4444;">
+                        <p>ไม่สามารถเปิดกล้องได้</p>
+                        <p style="font-size:13px; margin-top:8px;">กรุณาตรวจสอบสิทธิ์กล้องใน Settings</p>
+                    </div>
+                `;
             });
+        } catch (e) {
+            console.error(e);
+            showToast('เกิดข้อผิดพลาดในการเปิดกล้อง');
+            stopScanner();
         }
+    }, 300);
+}
 
         function stopScanner() {
             const modal = document.getElementById('scanner-modal');
