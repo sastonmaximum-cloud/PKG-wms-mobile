@@ -1260,66 +1260,61 @@
 
     modal.style.display = 'flex';
     modal.classList.remove('hidden');
-    qrReader.innerHTML = '<div style="text-align:center; padding:60px 0; color:#64748b;">กำลังเปิดกล้อง...</div>';
+    qrReader.innerHTML = '<div style="text-align:center; padding:70px 0; color:#64748b;">กำลังเปิดกล้อง...</div>';
 
     setTimeout(async () => {
         try {
-            // สร้าง instance ใหม่ทุกครั้ง
             html5QrCode = new Html5Qrcode("qr-reader");
 
-            // ดึงรายชื่อกล้องก่อน
+            // ดึงรายชื่อกล้อง
             const cameras = await Html5Qrcode.getCameras();
-            
             if (!cameras || cameras.length === 0) {
-                throw new Error("ไม่พบกล้องในอุปกรณ์นี้");
+                throw new Error("ไม่พบกล้อง");
             }
 
-            // เลือกกล้องหลัง (ตัวสุดท้ายมักเป็นกล้องหลัง)
-            const cameraId = cameras[cameras.length - 1].id;
+            // เลือกกล้องหลัง
+            const selectedCamera = cameras[cameras.length - 1];
 
             // เริ่มสแกน
             await html5QrCode.start(
-                cameraId,
+                selectedCamera.id,
                 {
                     fps: 10,
-                    qrbox: { width: 260, height: 160 },
-                    aspectRatio: 1.777
+                    qrbox: { width: 280, height: 170 }
                 },
                 (decodedText) => {
-                    const cleanText = decodedText.trim();
-
+                    const text = decodedText.trim();
+                    
                     if (currentScanTarget === 'location') {
-                        document.getElementById('putaway-location-input').value = cleanText;
+                        document.getElementById('putaway-location-input').value = text;
                         showToast('สแกนตำแหน่งสำเร็จ');
                     } else if (currentScanTarget === 'product') {
-                        document.getElementById('putaway-product-input').value = cleanText;
+                        document.getElementById('putaway-product-input').value = text;
                         showToast('สแกนสินค้าสำเร็จ');
                     }
                     stopScanner();
                 },
-                (errorMessage) => {
-                    // ไม่ต้องทำอะไร (กำลังสแกนต่อเนื่อง)
-                }
+                (err) => {}
             );
 
-        } catch (err) {
-            console.error("Camera Error:", err);
+        } catch (error) {
+            console.error("Scanner Error:", error);
             
             qrReader.innerHTML = `
-                <div style="text-align:center; padding:40px 20px; color:#ef4444;">
-                    <p style="font-size:16px; font-weight:600;">ไม่สามารถเปิดกล้องได้</p>
-                    <p style="font-size:13px; margin-top:12px; color:#64748b;">
-                        กรุณาตรวจสอบสิทธิ์กล้องใน<br>
-                        Settings → Safari → Camera
+                <div style="text-align:center; padding:30px 15px; color:#ef4444;">
+                    <p style="font-size:17px; font-weight:600;">ไม่สามารถเปิดกล้องได้</p>
+                    <p style="font-size:14px; margin-top:15px; color:#475569;">
+                        กรุณาตรวจสอบว่าได้อนุญาตการใช้กล้องแล้ว<br>
+                        หรือลองรีสตาร์ท Safari ใหม่
                     </p>
                     <button onclick="stopScanner()" 
-                            style="margin-top:20px; padding:10px 24px; background:#ef4444; color:white; border:none; border-radius:10px; font-size:15px;">
+                            style="margin-top:25px; padding:12px 30px; background:#ef4444; color:white; border:none; border-radius:12px; font-size:16px;">
                         ปิด
                     </button>
                 </div>
             `;
         }
-    }, 500);
+    }, 600);
 }
         function stopScanner() {
             const modal = document.getElementById('scanner-modal');
