@@ -1253,33 +1253,41 @@
         let html5QrCode = null;
         let currentScanTarget = null; // 'location' or 'product'
 
-       function startRealScan(target) {
+      function startRealScan(target) {
     currentScanTarget = target;
     const modal = document.getElementById('scanner-modal');
     const qrReader = document.getElementById('qr-reader');
 
     modal.style.display = 'flex';
     modal.classList.remove('hidden');
-    qrReader.innerHTML = '<div style="text-align:center; padding:50px 0; color:#64748b;">กำลังเปิดกล้อง...</div>';
+    qrReader.innerHTML = '<div style="text-align:center; padding:60px 0; color:#64748b;">กำลังเปิดกล้อง...</div>';
 
     setTimeout(async () => {
         try {
+            // สร้าง instance ใหม่ทุกครั้ง
             html5QrCode = new Html5Qrcode("qr-reader");
 
-            const devices = await Html5Qrcode.getCameras();
-            if (!devices || devices.length === 0) {
-                throw new Error("ไม่พบกล้องในอุปกรณ์");
+            // ดึงรายชื่อกล้องก่อน
+            const cameras = await Html5Qrcode.getCameras();
+            
+            if (!cameras || cameras.length === 0) {
+                throw new Error("ไม่พบกล้องในอุปกรณ์นี้");
             }
 
-            // เลือกกล้องหลังเป็นหลัก
-            const cameraId = devices[devices.length - 1].id;
+            // เลือกกล้องหลัง (ตัวสุดท้ายมักเป็นกล้องหลัง)
+            const cameraId = cameras[cameras.length - 1].id;
 
+            // เริ่มสแกน
             await html5QrCode.start(
                 cameraId,
-                { fps: 10, qrbox: { width: 250, height: 150 } },
+                {
+                    fps: 10,
+                    qrbox: { width: 260, height: 160 },
+                    aspectRatio: 1.777
+                },
                 (decodedText) => {
                     const cleanText = decodedText.trim();
-                    
+
                     if (currentScanTarget === 'location') {
                         document.getElementById('putaway-location-input').value = cleanText;
                         showToast('สแกนตำแหน่งสำเร็จ');
@@ -1289,22 +1297,29 @@
                     }
                     stopScanner();
                 },
-                (errorMessage) => {}
+                (errorMessage) => {
+                    // ไม่ต้องทำอะไร (กำลังสแกนต่อเนื่อง)
+                }
             );
+
         } catch (err) {
-            console.error(err);
+            console.error("Camera Error:", err);
+            
             qrReader.innerHTML = `
-                <div style="text-align:center; padding:30px; color:#ef4444;">
-                    <p><strong>ไม่สามารถเปิดกล้องได้</strong></p>
-                    <p style="font-size:13px; margin-top:10px;">กรุณาตรวจสอบสิทธิ์กล้องใน<br>Settings → Safari → Camera</p>
+                <div style="text-align:center; padding:40px 20px; color:#ef4444;">
+                    <p style="font-size:16px; font-weight:600;">ไม่สามารถเปิดกล้องได้</p>
+                    <p style="font-size:13px; margin-top:12px; color:#64748b;">
+                        กรุณาตรวจสอบสิทธิ์กล้องใน<br>
+                        Settings → Safari → Camera
+                    </p>
                     <button onclick="stopScanner()" 
-                            style="margin-top:15px; padding:8px 20px; background:#ef4444; color:white; border:none; border-radius:8px;">
+                            style="margin-top:20px; padding:10px 24px; background:#ef4444; color:white; border:none; border-radius:10px; font-size:15px;">
                         ปิด
                     </button>
                 </div>
             `;
         }
-    }, 400);
+    }, 500);
 }
         function stopScanner() {
             const modal = document.getElementById('scanner-modal');
